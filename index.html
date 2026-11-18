@@ -24,6 +24,14 @@
   --fs-md:14.5px;  /* body, log lines, times, hours */
   --fs-lg:16px;    /* nav, inputs, sheet titles */
 }
+#blkTally{margin:0 0 12px}
+#blkTally .tr{display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+  padding:5px 0;border-bottom:1px solid var(--line)}
+#blkTally .tr:last-child{border-bottom:0}
+#blkTally .nm{font-size:var(--fs-md);color:var(--fg)}
+#blkTally .vl{font-size:var(--fs-md);white-space:nowrap;font-variant-numeric:tabular-nums}
+#blkTally .hh{color:var(--dim)}
+#blkTally .no{color:var(--faint);font-size:var(--fs-sm)}
 *{box-sizing:border-box}
 /* .two{display:grid} and .field{display:block} outrank the UA rule for
    [hidden], so anything hidden by attribute needs this to actually go away. */
@@ -263,6 +271,7 @@ select{appearance:none;padding-right:20px;
       <div class="h"><span class="cap" id="blkCount">0 blocks</span>
         <span><button class="btn bare" id="selAll">select all</button>
         <button class="btn bare" id="selNone" style="margin-left:14px">clear</button></span></div>
+      <div id="blkTally"></div>
       <div id="blockList"></div>
     </div>
     <div class="bar" id="bar" hidden>
@@ -366,7 +375,7 @@ select{appearance:none;padding-right:20px;
 <script>
 (function(){
 "use strict";
-var VERSION="1.13.0";
+var VERSION="1.14.0";
 var LS="daybook.v1", LSUI="daybook.ui";
 
 /* ---------- small helpers ---------- */
@@ -897,6 +906,33 @@ function filtered(){var b=rangeBounds();
     if(range.mode==="billed"&&!isInvoiced(x))return false;
     if(filtClient&&x.clientId!==filtClient)return false;
     return true})}
+/* What each client is worth in the blocks currently on screen. It follows
+   the range and client filters rather than computing its own total, so the
+   number always answers "what am I looking at" — which on the default
+   un-invoiced range is the same as "what do they owe me". */
+function renderTally(list){
+  var host=$("#blkTally"); host.innerHTML="";
+  if(!list.length) return;
+  var by={};
+  list.forEach(function(b){
+    var t=by[b.clientId]||(by[b.clientId]={h:0,a:0,rated:false});
+    t.h+=roundHours(rawHours(b)); t.a+=amountFor(b);
+    if(rateFor(b)) t.rated=true;
+  });
+  var rows=Object.keys(by).map(function(cid){
+    return {name:clientName(cid),h:by[cid].h,
+            a:Math.round(by[cid].a*100)/100,rated:by[cid].rated}});
+  if(rows.length<2 && !rows[0].rated) return;   /* nothing a total would add */
+  rows.sort(function(x,y){return y.a-x.a || y.h-x.h});
+  rows.forEach(function(r){
+    var tr=el("div","tr");
+    tr.appendChild(el("span","nm",r.name));
+    var v=el("span","vl");
+    v.appendChild(el("span","hh",fmtH(r.h)+" h  "));
+    v.appendChild(r.rated?el("span",null,money(r.a)):el("span","no","no rate"));
+    tr.appendChild(v); host.appendChild(tr);
+  });
+}
 function renderBlocks(){
   var opts=$("#rangeOpts");
   if(!opts.childNodes.length){
@@ -926,6 +962,7 @@ function renderBlocks(){
   Object.keys(selected).forEach(function(id){if(!vis[id])delete selected[id]});
   $("#blkCount").textContent=list.length+(list.length===1?" block · ":" blocks · ")+
     fmtH(list.reduce(function(s,b){return s+roundHours(rawHours(b))},0))+" h";
+  renderTally(list);
   var host=$("#blockList");host.innerHTML="";host.appendChild(logList(list,true));
 
   var ids=Object.keys(selected),bar=$("#bar");bar.hidden=!ids.length;
