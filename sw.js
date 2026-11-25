@@ -5,7 +5,8 @@ var CACHE = "radicchio";
 var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png",
   "./config.js", "./core/app.css", "./core/util.js", "./core/registry.js", "./core/store.js",
   "./core/files.js", "./core/lineitems.js", "./core/sheets.js", "./core/invoices.js",
-  "./core/setup.js", "./core/backup.js", "./core/load.js", "./core/boot.js"];
+  "./core/setup.js", "./core/backup.js", "./core/merge.js", "./core/drive.js",
+  "./core/load.js", "./core/boot.js"];
 /* The modules come from config.js, so a new module needs no change here. */
 try {
   importScripts("./config.js");

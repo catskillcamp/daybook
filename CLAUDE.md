@@ -20,6 +20,8 @@ core/          shared by every version                  ← maintained upstream
   invoices.js    invoices tab, invoice documents, document viewer
   setup.js       setup tab, clients, settings
   backup.js      backup import (merge / replace)
+  merge.js       three-way merge used by sync (base / this device / Drive)
+  drive.js       Google sign-in, Drive sync, saving documents to Drive
   load.js        loads the modules listed in config.js, then boot.js
   boot.js        start-up; runs last
 modules/       features that can be switched on or off  ← add your own here
@@ -37,4 +39,5 @@ sw.js          offline cache (reads the module list from config.js)
 - Scripts are classic scripts sharing one global scope, not ES modules. Core's functions (`$`, `el`, `money`, `toast`, `openSheet`, `head`, `fieldOf`, `inp`, `keepList`, `calendar`, `itemEditor` …) and `S` are global. Inside a module, keep everything private and expose it only through `registerModule`.
 - Never remove or rename an existing key in `S`: other devices and old backups still carry it.
 - In the main repo, bump `VERSION` in `core/store.js` with each change so phones pick up the new files.
+- **Keep `FORK-GUIDE.md` current.** In the main repo, any change that affects what someone can do, set up or customise (a new feature, a new setting, a new setup step, something moving from "coming" to "ready") updates `FORK-GUIDE.md` in the same pull request. Its link is shared with people as the description of the latest version.
 - The built-in tabs (track, blocks, quotes) are in `index.html` and carry `data-module="<id>"`, so they hide when their module is off.

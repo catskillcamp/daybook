@@ -58,8 +58,11 @@ function writeIntoFolder(parts,text){
   }).catch(function(){return false});
 }
 var autoSaveT=null;
+/* With Google Drive connected, Drive holds the one copy every device mirrors,
+   so the connected folder steps aside rather than keep a second copy. */
 function folderAutoSave(){
   if(!folderHandle) return;
+  if(typeof driveOn==="function"&&driveOn()) return;
   clearTimeout(autoSaveT);
   autoSaveT=setTimeout(writeStore,1500);
 }
@@ -88,9 +91,21 @@ function writeAllDerived(){
 }
 
 /* ---------- delivery ---------- */
-function deliver(parts,text,mime){
+/* driveParts, when given, is where the file goes in the Radicchio folder on
+   Google Drive (e.g. ["Invoices", client, name]). With Drive connected that is
+   the only place it goes; otherwise the connected folder, else the share sheet. */
+function deliver(parts,text,mime,driveParts){
   var filename=parts[parts.length-1];
-  if(folderHandle){
+  if(driveParts&&typeof driveOn==="function"&&driveOn()){
+    driveSaveFile(driveParts,text,mime).then(function(){
+      toast("saved to Drive: "+[DRIVE_ROOT].concat(driveParts).join("/"));
+    }).catch(function(e){
+      toast("couldn't save to Drive — "+e.message);
+      if(folderHandle) writeIntoFolder(parts,text); else share();
+    });
+    return;
+  }
+  if(folderHandle&&!(typeof driveOn==="function"&&driveOn())){
     writeIntoFolder(parts,text).then(function(ok){
       if(ok) toast("saved to "+parts.join("/"));
       else share();

@@ -87,6 +87,11 @@
       <span class="cap">clients</span><button class="btn bare" id="addClient">+ add client</button></div>
     <div id="clientList"></div>
 
+    <div class="sec" id="driveSec" hidden>
+      <div class="h"><span class="cap">google drive</span></div>
+      <div id="driveRow"></div>
+    </div>
+
     <div class="sec">
       <div class="h"><span class="cap">invoice folder</span></div>
       <div id="folderRow"></div>
@@ -147,7 +152,7 @@
 
     <div class="help">
       <p><b>version</b> <span id="ver"></span> — <span id="swState">checking</span></p>
-      <p><b>offline —</b> the whole app is stored on this device. It opens with no signal and your entries never leave the phone unless you export them.</p>
+      <p><b>offline —</b> the whole app is stored on this device. It opens with no signal. Your entries stay on the device unless you export them or connect Google Drive.</p>
       <p><b>invoice folder —</b> on a computer, connect your Time Tracker folder once and invoices write straight into Invoices/&lt;client&gt;/. On a phone, export hands the file to the share sheet instead.</p>
     </div>
   </section>
@@ -169,6 +174,8 @@
 <script src="./core/invoices.js"></script>
 <script src="./core/setup.js"></script>
 <script src="./core/backup.js"></script>
+<script src="./core/merge.js"></script>
+<script src="./core/drive.js"></script>
 <script src="./core/load.js"></script>
 </body>
 </html>

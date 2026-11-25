@@ -11,6 +11,8 @@ There are two ways in.
 
 Fill in your details and clients on the **setup** tab, and you're tracking. Your entries stay on your phone and aren't sent anywhere. Use **setup → backup json** now and then to keep a copy. The app's features and look are Eamon's, and they change when he updates it.
 
+Google Drive sync, which keeps your phone and computer in step, works on this shared app only once Eamon adds your Google email as a tester. Your data then goes to a Radicchio folder in *your* Drive, never his. Your own version (path 2) can have its own sync.
+
 **2. Make your own version.** Choose this if you want your own name and icon, only the features you need, or new features of your own. You get a copy of the project on GitHub, and you shape it with Claude's help, without needing to know how to program. Read on.
 
 ---
@@ -52,12 +54,11 @@ A personal version is a **fork**: your own copy of the project on GitHub. You ch
 
 | Ready now | Coming later |
 |---|---|
-| Time tracking, invoices, work reports, quotes | Google Drive sync, so phone and computer share data* |
-| Your own modules, with their own tab and saved data | Line items on invoices (expenses, not just hours) |
-| Backups, and import with a safe merge | Receipt and PDF scanning |
+| Time tracking, invoices, work reports, quotes | Line items on invoices (expenses, not just hours) |
+| Google Drive sync between devices; invoices and quotes saved to Drive | Receipt and PDF scanning |
+| Your own modules, with their own tab, saved data and colours | |
+| Backups, and import with a safe merge | |
 | Hosting your version free on GitHub Pages | |
-
-\* Drive sync will need a one-time Google setup in each person's own version. This guide will cover it when it lands.
 
 To see what's changed since this guide was written:
 
@@ -137,6 +138,18 @@ In the code, edit `config.js`:
 
 They can also change the home-screen name (`name` and `short_name` in `manifest.webmanifest`) and the icon (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`). Those files rarely change upstream, so editing them is fine.
 
+**Colours:** don't edit `core/app.css`. Make a tiny module, `modules/theme.js`, whose `css` overrides the colour variables, and add `"theme"` to `modules`:
+
+```js
+(function(){
+"use strict";
+if(!moduleOn("theme")) return;
+registerModule({id:"theme", css:":root{--bg:#1a0610;--fg:#f6e9ee;--dim:#c98aa4;--faint:#7d4a5e;--line:#3a1424;--line-2:#5c2238;--online:#e0457b}"});
+})();
+```
+
+`--bg` is the background, `--fg` the text, `--dim` and `--faint` the quieter text, `--line` and `--line-2` the rules and borders, and `--online` the one accent colour. Invoices and quotes keep their plain printable look. Also set `theme_color` and `background_color` in `manifest.webmanifest` to match.
+
 In the app itself, on the **setup** tab, set:
 
 - their business details, which print on invoices;
@@ -161,12 +174,31 @@ Reload to check, then commit and push.
 
 Data is per device and per address. If they used path 1 before, their entries are under Eamon's address: export them there (**setup → backup json**) and import them into their own version (**setup → import json → merge**).
 
+## Part 6½: Google Drive sync (optional)
+
+With sync on, every device signed in to the same Google account shares the same data, and invoices and quotes are saved into their Drive. Data goes to a folder in *their own* Drive, and the app can see only the files it creates.
+
+It needs a Google Cloud **OAuth client ID** in `config.js` (`googleClientId`), and that client must allow their app's address. There are two ways:
+
+- **Share Eamon's** (friends and family): they send Eamon their GitHub username and Google email. He adds `https://<username>.github.io` as an allowed origin and their email as a test user in his "Radicchio" Google Cloud project. They keep the `googleClientId` already in `config.js`.
+- **Their own Google Cloud project**, done once in a browser, signed in as them:
+  1. https://console.cloud.google.com/projectcreate: create a project.
+  2. https://console.cloud.google.com/apis/library/drive.googleapis.com: **Enable**.
+  3. https://console.cloud.google.com/auth/overview → **Get started**: app name, support email, Audience **External**, contact email, and agree to the User Data Policy (they decide this).
+  4. **Audience → Test users:** add their own Google email.
+  5. **Data Access → Add or remove scopes:** tick `…/auth/drive.file`, then **Update** and **Save**.
+  6. **Clients → Create client:** Web application, with Authorized JavaScript origins `https://<username>.github.io` and `http://localhost:8000`. Copy the **Client ID** into `googleClientId` in `config.js`. The client secret isn't needed: don't copy it anywhere.
+
+Then, in the app: **setup → connect google drive**, and approve. Google warns that the app "hasn't verified" it; that's expected for a personal testing-mode app, so click **Continue**. The header then shows *synced*. Google's sign-in lasts an hour, and after that the header says *tap to sync*. Changes wait safely on the device until then.
+
+`driveFolder` in `config.js` names the Drive folder (default "Radicchio").
+
 ## Part 7: Their own features
 
 Each new feature is a module. Interview first: what should it do, what does it record, and what do they want to see at a glance? Then build `modules/<id>.js`, following `CLAUDE.md`:
 
 - Give it its own tab with `tab: {key: "<id>", label: "…"}`, or add sheets to existing flows.
-- Keep its data in `modData("<id>")`: an object keyed by `uid()`, with an `updatedAt: now()` on every record.
+- Keep its data in `modData("<id>")`: an object keyed by `uid()`, with an `updatedAt: now()` on every record. That's what lets Drive sync merge it correctly between devices.
 - Reuse core pieces: `openSheet` with a sheet builder, `fieldOf`, `inp`, `calendar`, `keepList`, `itemEditor`, `money()`, `toast()`. `modules/quotes.js` shows them in use.
 - Add the id to `modules` in `config.js`. Nothing else needs wiring.
 
