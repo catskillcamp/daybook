@@ -13,6 +13,8 @@
        tab:     {key:"budget", label:"budget"},  // core adds a tab and an empty
                                           // panel #p-budget for render() to fill
        css:     ".budget .row{...}",      // styles for the module's own markup
+       billables: function(clientId){...},  // things waiting to be billed (see
+       onVoid:  function(invoice){...},     // core/invoices.js); release on void
        quoteBody, viewerButtons, ...      // optional hooks core asks for by name
      });
 

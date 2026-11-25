@@ -47,6 +47,7 @@ The code has two layers:
 - **`modules/`** holds the features, each in one file that can be switched on or off in `config.js`. Two come with it:
   - **time:** clock in and out, log time blocks with notes, and turn selected blocks into an invoice (with extra line items if needed) or a work report.
   - **quotes:** quotes with line items or a lump sum, deposits, and reusable templates.
+  - **prints:** price 3D print jobs (grams × material $/g + print hours × machine $/h, plus markup; defaults with per-client overrides), and bill them onto invoices.
 
 A personal version is a **fork**: your own copy of the project on GitHub. You change it freely in `config.js` and `modules/`, and pull in Eamon's core improvements with one button, **Sync fork**. As long as you don't edit `core/`, those updates arrive without clashing with your changes.
 
@@ -56,6 +57,7 @@ A personal version is a **fork**: your own copy of the project on GitHub. You ch
 |---|---|
 | Time tracking, invoices, work reports, quotes | Receipt and PDF scanning |
 | Line items on invoices: flat fees and expenses, with or without hours | |
+| 3D print pricing and billing (the `prints` module) | |
 | Google Drive sync between devices; invoices and quotes saved to Drive | |
 | Your own modules, with their own tab, saved data and colours | |
 | Backups, and import with a safe merge | |
@@ -204,6 +206,7 @@ Each new feature is a module. Interview first: what should it do, what does it r
 - Reuse core pieces: `openSheet` with a sheet builder, `fieldOf`, `inp`, `calendar`, `keepList`, `itemEditor`, `money()`, `toast()`. `modules/quotes.js` shows them in use.
 - To bill something, record an invoice whose `items` are line items `{desc, qty, unit, rate, source, date?, category?, file?}`, using `recordInvoice(doc, client, [])` and `saveDocFile(...)` from `core/invoices.js`. The invoices tab's **+ new invoice** sheet (`sheetNewInvoice`) shows how.
 - Add the id to `modules` in `config.js`. Nothing else needs wiring.
+- If the feature produces things to bill later (like `prints`), give the module `billables(clientId)` and `onVoid(invoice)`. The invoice sheets then offer them with tick boxes. `modules/prints.js` is the example.
 
 Try it on the computer, adjust it together, then push it and try it on the phone. Expect a few rounds.
 
@@ -217,7 +220,9 @@ On GitHub: their repo → **Sync fork** → **Update branch**. Or:
 gh repo sync <username>/<repo-name> && git pull
 ```
 
-If a sync reports a conflict, a file outside `config.js`, `modules/`, the icons, the manifest or `my-notes.md` was edited. Undo that edit, and ask for the change upstream instead.
+If a sync reports a conflict in **`config.js`**, it's usually the `modules` line, which upstream also changes now and then (e.g. adding `"prints"`). Keep *their own* `name` and `modules` lines, and accept any new settings upstream added above them.
+
+A conflict in any other file means something outside `config.js`, `modules/`, the icons, the manifest or `my-notes.md` was edited. Undo that edit, and ask for the change upstream instead.
 
 ## Part 9: Asking for a core change
 

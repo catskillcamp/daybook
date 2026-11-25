@@ -36,6 +36,7 @@ core/drive.js     Google sign-in, Drive REST, driveSync, driveSaveFile, Drive se
 core/load.js      appends modules/<id>.js for each CONFIG.modules id, then core/boot.js
 modules/time.js   (via load.js) track and blocks tabs, clock, entries, log parser, invoices from hours
 modules/quotes.js (via load.js) quotes tab, quote sheet, templates, quote documents
+modules/prints.js (via load.js) prints tab: 3D print jobs, rates (materials, client overrides), billing
 core/boot.js      module tabs/CSS, nav, load(), first render, sheet restore, sync start, offline worker
 ```
 
@@ -53,6 +54,8 @@ A module is one file, `modules/<id>.js`, wrapped in `(function(){ "use strict"; 
 | `tab: {key, label}` | `boot.js` adds a nav button before "invoices" and an empty `<section id="p-<key>">` |
 | `css` | `boot.js` injects a `<style>` |
 | `quoteBody`, `viewerButtons` | hooks the document viewer asks for with `hook(name)` |
+| `billables(clientId)` | the invoice sheets list what's waiting to be billed (`billablePicker`); ticked entries become line items, and their `bill(invoiceId)` marks them |
+| `onVoid(invoice)` | voiding an invoice; release whatever it billed |
 
 The built-in tabs (track, blocks, quotes) are static markup in `index.html` with `data-module="<id>"`, and boot hides them when their module is off.
 

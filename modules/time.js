@@ -527,13 +527,15 @@ function sheetInvoice(sh,d){
   sh.appendChild(el("div","note","Used for the total line, and for any block with no note. Left blank, those cells print empty."));
   /* extra line items beside the hours: materials, a flat fee, an expense */
   var summary=el("div","note");
+  function pickedItems(){ return report?[]:pickedBillables(client.id,d.draft).map(function(b){return b.item}) }
   function paintSummary(){
-    var ia=report?0:itemsTotal(d.draft.items);
+    var ia=report?0:itemsTotal(pickedItems().concat(d.draft.items||[]));
     summary.textContent=client.name+" · "+list.length+" blocks · "+fmtH(h)+" h"+
       (report?"":" · "+money(Math.round((amt+ia)*100)/100)+(ia?" incl. "+money(ia)+" items":""));
   }
   if(!report){
     if(!d.draft.items) d.draft.items=[];
+    billablePicker(sh,function(){return client.id},d.draft,paintSummary);
     sh.appendChild(el("div","field")).appendChild(el("span",null,"extra items"));
     itemEditor(sh,function(){return d.draft.items},function(l){d.draft.items=l},paintSummary);
   }
@@ -570,7 +572,7 @@ function sheetInvoice(sh,d){
   paintButtons();
 
   function compose(){
-    var items=report?[]:cleanItems(d.draft.items);
+    var items=report?[]:cleanItems(pickedItems().concat(d.draft.items||[]));
     return {number:report?"":(numIn?numIn.value.trim():""),clientId:client.id,
       issued:dateIn.value,due:dueIn?dueIn.value:"",memo:memo.value.trim(),
       mode:mode.value,desc:desc.value.trim(),report:report,
@@ -580,7 +582,11 @@ function sheetInvoice(sh,d){
   }
   function finish(asHtml){
     var doc=compose();
-    if(!report){ recordInvoice(doc,client,list); selected={}; }
+    if(!report){
+      var picked=pickedBillables(client.id,d.draft);
+      recordInvoice(doc,client,list); selected={};
+      picked.forEach(function(b){ b.bill(doc.id) }); save();
+    }
     saveDocFile(doc,client,list,!asHtml);
     save();UI.sheet=null;saveUI();closeSheet();renderAll();
     showViewer(doc,client,list,false);
