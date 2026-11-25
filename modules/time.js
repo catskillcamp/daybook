@@ -570,7 +570,7 @@ function sheetInvoice(sh,d){
     var base=report
       ? "report "+ymd(now())+" "+safeName(client.name)
       : safeName(doc.number||"invoice")+" "+safeName(client.name);
-    var parts=[safeName(S.settings.invoiceDir||"Daybook Invoices"),
+    var parts=[safeName(S.settings.invoiceDir||"Radicchio Invoices"),
                safeName(client.name),base+(asHtml?".html":".csv")];
     if(asHtml) deliver(parts,docFile(doc,client,list),"text/html;charset=utf-8");
     else deliver(parts,toCsv(list),"text/csv;charset=utf-8");

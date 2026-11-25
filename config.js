@@ -8,7 +8,7 @@
    ============================================================ */
 var CONFIG = {
   /* Shown in the header and on the browser tab. */
-  name: "Daybook",
+  name: "Radicchio",
 
   /* Features to switch on. Each is a file in modules/.
        "time"   — clock in/out, time blocks, invoices from hours

@@ -6,6 +6,7 @@ var folderHandle=null, IDB=null;
 function idb(){
   if(IDB) return IDB;
   IDB=new Promise(function(res,rej){
+    /* still named "daybook": it only holds the connected-folder handle */
     var r=indexedDB.open("daybook",1);
     r.onupgradeneeded=function(){r.result.createObjectStore("kv")};
     r.onsuccess=function(){res(r.result)}; r.onerror=function(){rej(r.error)};
@@ -69,14 +70,14 @@ function folderAutoSave(){
    "write master sheets" button now. */
 function writeStore(){
   if(!folderHandle) return Promise.resolve();
-  var dd=safeName(S.settings.dataDir||"Daybook Data");
-  return writeIntoFolder([dd,"daybook-data.json"],JSON.stringify(S,null,1));
+  var dd=safeName(S.settings.dataDir||"Radicchio Data");
+  return writeIntoFolder([dd,"radicchio-data.json"],JSON.stringify(S,null,1));
 }
 /* The master sheets are derived, not accumulated: each is regenerated in full
    from the JSON every time, so they can never double up or fall behind. */
 function writeAllDerived(){
   if(!folderHandle) return Promise.resolve();
-  var dd=safeName(S.settings.dataDir||"Daybook Data");
+  var dd=safeName(S.settings.dataDir||"Radicchio Data");
   var jobs=[writeStore()];
   var byClient={};
   allEntries().forEach(function(b){(byClient[b.clientId]=byClient[b.clientId]||[]).push(b)});

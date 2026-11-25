@@ -10,14 +10,14 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>Daybook</title>
+<title>Radicchio</title>
 <link rel="stylesheet" href="./core/app.css">
 </head>
 <body>
 
 <header>
   <div class="wrap">
-    <div class="title"><b id="appName">daybook</b><span class="st" id="st">&nbsp;</span></div>
+    <div class="title"><b id="appName">radicchio</b><span class="st" id="st">&nbsp;</span></div>
     <nav role="tablist">
       <button role="tab" aria-selected="true" data-tab="track" data-module="time">track</button>
       <button role="tab" aria-selected="false" data-tab="blocks" data-module="time">blocks</button>
@@ -157,7 +157,8 @@
 <div class="scrim" id="scrim" hidden><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- Order matters: config, then core, then modules, then boot. -->
+<!-- Order matters: config, then core. core/load.js then adds the modules named
+     in config.js, and core/boot.js last. -->
 <script src="./config.js"></script>
 <script src="./core/util.js"></script>
 <script src="./core/registry.js"></script>
@@ -168,8 +169,6 @@
 <script src="./core/invoices.js"></script>
 <script src="./core/setup.js"></script>
 <script src="./core/backup.js"></script>
-<script src="./modules/time.js"></script>
-<script src="./modules/quotes.js"></script>
-<script src="./core/boot.js"></script>
+<script src="./core/load.js"></script>
 </body>
 </html>

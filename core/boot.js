@@ -1,5 +1,21 @@
 "use strict";
 /* Wiring that belongs to no one module, then start-up. Loaded last. */
+/* ---------- module tabs and styles ---------- */
+/* A module that asks for a tab gets a nav button before "invoices" and an
+   empty panel that its render() fills. */
+MODULES.forEach(function(m){
+  if(m.css){ var st=document.createElement("style"); st.textContent=m.css; document.head.appendChild(st); }
+  if(!m.tab||!m.tab.key) return;
+  var inv=document.querySelector('nav button[data-tab="invoices"]');
+  var b=document.createElement("button");
+  b.setAttribute("role","tab"); b.setAttribute("aria-selected","false");
+  b.dataset.tab=m.tab.key; b.textContent=m.tab.label||m.tab.key;
+  inv.parentNode.insertBefore(b,inv);
+  var p=document.createElement("section");
+  p.className="panel"; p.id="p-"+m.tab.key;
+  document.querySelector("main").appendChild(p);
+});
+
 /* ---------- wiring ---------- */
 document.querySelectorAll("nav button").forEach(function(b){
   b.addEventListener("click",function(){ showTab(b.dataset.tab) })});

@@ -80,6 +80,7 @@ function applyBackup(p,mode){
     S.invoices=p.invoices||{};
     S.quotes=p.quotes||{};
     S.qtemplates=p.qtemplates||{};
+    S.mods=p.mods||{};
     migrate();save();return;
   }
   var pl=planMerge(p);
@@ -91,7 +92,28 @@ function applyBackup(p,mode){
   S.invoices=Object.assign(S.invoices,p.invoices||{});
   S.quotes=Object.assign(S.quotes||{},p.quotes||{});
   S.qtemplates=Object.assign(S.qtemplates||{},p.qtemplates||{});
+  S.mods=mergeMods(S.mods||{},p.mods||{});
   migrate();save();
+}
+/* Module data merges record by record. A module keeps each collection as an
+   object keyed by id, every record carrying updatedAt, and the newer copy of a
+   record wins. Anything else keeps this device's value, unless it has none. */
+function mergeMods(local,incoming){
+  for(var id in incoming){
+    var L=local[id], I=incoming[id];
+    if(!L||typeof L!=="object"||!I||typeof I!=="object"){ if(L===undefined) local[id]=I; continue }
+    for(var key in I){
+      if(!(key in L)){ L[key]=I[key]; continue }
+      var a=L[key], b=I[key];
+      if(!a||!b||typeof a!=="object"||typeof b!=="object"||Array.isArray(a)||Array.isArray(b)) continue;
+      for(var r in b){
+        var x=a[r], y=b[r];
+        if(x===undefined) a[r]=y;
+        else if(x&&y&&typeof x==="object"&&typeof y==="object"&&(+y.updatedAt||0)>(+x.updatedAt||0)) a[r]=y;
+      }
+    }
+  }
+  return local;
 }
 function mergeBackup(p){ return applyBackup(p,"merge") }
 

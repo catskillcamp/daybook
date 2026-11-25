@@ -1,6 +1,6 @@
 {
-  "name": "Daybook",
-  "short_name": "Daybook",
+  "name": "Radicchio",
+  "short_name": "Radicchio",
   "description": "Freelance hours, logged as they happen.",
   "start_url": "./index.html",
   "scope": "./",
@@ -11,6 +11,6 @@
   "icons": [
     { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
