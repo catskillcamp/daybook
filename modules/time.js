@@ -572,8 +572,9 @@ function sheetInvoice(sh,d){
       : safeName(doc.number||"invoice")+" "+safeName(client.name);
     var parts=[safeName(S.settings.invoiceDir||"Radicchio Invoices"),
                safeName(client.name),base+(asHtml?".html":".csv")];
-    if(asHtml) deliver(parts,docFile(doc,client,list),"text/html;charset=utf-8");
-    else deliver(parts,toCsv(list),"text/csv;charset=utf-8");
+    var dparts=["Invoices",safeName(client.name),parts[2]];
+    if(asHtml) deliver(parts,docFile(doc,client,list),"text/html;charset=utf-8",dparts);
+    else deliver(parts,toCsv(list),"text/csv;charset=utf-8",dparts);
     if(!report){
       var id=uid();
       doc.id=id; doc.createdAt=now();

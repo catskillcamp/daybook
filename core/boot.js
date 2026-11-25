@@ -39,6 +39,7 @@ document.querySelectorAll("[data-module]").forEach(function(n){
 document.addEventListener("keydown",function(e){
   if(e.key==="Escape"&&viewerState) hideViewer()});
 load();
+driveLoad();
 tuneInputs(document);
 /* a tab whose module was switched off falls back to the first one left */
 (function(){
@@ -58,8 +59,8 @@ if(UI.sheet){
 
 function persist(){ saveUI(); try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){} }
 document.addEventListener("visibilitychange",function(){
-  if(document.hidden) persist();
-  else MODULES.forEach(function(m){if(m.onShow)m.onShow()});
+  if(document.hidden){ persist(); if(DRV.timer) driveSync(false); }   /* push pending changes on the way out */
+  else { MODULES.forEach(function(m){if(m.onShow)m.onShow()}); driveSync(false); }
 });
 window.addEventListener("pagehide",persist);
 window.addEventListener("blur",persist);
@@ -68,15 +69,26 @@ window.addEventListener("blur",persist);
 /* navigator.onLine reports whether the device has a network interface, not
    whether the internet is actually reachable — a captive wifi still reads
    online. Good enough to tell you whether a push will be picked up. */
+/* With Google Drive connected the same spot shows the sync state, and a tap
+   there syncs when the sign-in needs renewing. */
 function paintNet(){
-  var up=navigator.onLine!==false, n=$("#st");
-  n.textContent=up?"online":"offline";
-  n.classList.toggle("up",up);
+  var up=navigator.onLine!==false, n=$("#st"), t=up?"online":"offline", good=up;
+  if(up&&driveOn()){
+    t={synced:"synced",syncing:"syncing…",tap:"tap to sync",error:"sync failed — tap",offline:"offline"}[DRV.status]||"online";
+    good=DRV.status==="synced";
+  }
+  n.textContent=t;
+  n.classList.toggle("up",good);
+  n.style.cursor=(driveOn()&&(DRV.status==="tap"||DRV.status==="error"))?"pointer":"";
 }
-window.addEventListener("online",paintNet);
+$("#st").addEventListener("click",function(){
+  if(driveOn()&&(DRV.status==="tap"||DRV.status==="error")) driveSync(true);
+});
+window.addEventListener("online",function(){ paintNet(); driveSync(false) });
 window.addEventListener("offline",paintNet);
 document.addEventListener("visibilitychange",function(){if(!document.hidden)paintNet()});
 paintNet();
+driveSync(false);
 
 /* ---------- service worker ---------- */
 if("serviceWorker" in navigator){

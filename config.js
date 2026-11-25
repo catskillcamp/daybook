@@ -7,6 +7,14 @@
    in a fork so fixes from the main app can be pulled in cleanly.
    ============================================================ */
 var CONFIG = {
+  /* Google Drive sync: the OAuth client ID of a Google Cloud project whose
+     allowed origins include this app's address (see "Google Drive sync" in
+     FORK-GUIDE.md). Not a secret. "" keeps the app offline-only. */
+  googleClientId: "159490205161-9o8k40c7ro83laj95r0em8vg9sj7nrva.apps.googleusercontent.com",
+
+  /* The folder in Google Drive that holds the data, invoices and quotes. */
+  driveFolder: "Radicchio",
+
   /* Shown in the header and on the browser tab. */
   name: "Radicchio",
 

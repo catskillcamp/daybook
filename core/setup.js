@@ -3,6 +3,7 @@
 
 /* ---------- render: setup ---------- */
 function renderSetup(){
+  if(typeof renderDrive==="function") renderDrive();
   var cl=$("#clientList");cl.innerHTML="";
   var cs=liveClients();
   if(!cs.length)cl.appendChild(el("div","empty","none yet"));

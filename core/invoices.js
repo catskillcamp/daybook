@@ -249,7 +249,8 @@ function showViewer(doc,client,list,preview){
       var dir=doc.quote?(S.settings.quoteDir||"Radicchio Quotes"):(S.settings.invoiceDir||"Radicchio Invoices");
       var name=safeName((doc.number||(doc.quote?"quote":"invoice"))+" "+client.name);
       deliver([safeName(dir),safeName(client.name),name+".html"],
-        docFile(doc,client,list),"text/html;charset=utf-8")};
+        docFile(doc,client,list),"text/html;charset=utf-8",
+        [doc.quote?"Quotes":"Invoices",safeName(client.name),name+".html"])};
     bar.appendChild(sv);
   }
   if(lastBtn) bar.appendChild(lastBtn);
