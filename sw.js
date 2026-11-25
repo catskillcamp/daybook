@@ -2,7 +2,11 @@
    Network-first so a change you ask for lands the next time you open the app
    with signal; cache fallback so it opens at all when you have none. */
 var CACHE = "daybook";
-var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
+  "./config.js", "./core/app.css", "./core/util.js", "./core/registry.js", "./core/store.js",
+  "./core/files.js", "./core/lineitems.js", "./core/sheets.js", "./core/invoices.js",
+  "./core/setup.js", "./core/backup.js", "./core/boot.js",
+  "./modules/time.js", "./modules/quotes.js"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(
