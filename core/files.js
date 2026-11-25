@@ -58,8 +58,11 @@ function writeIntoFolder(parts,text){
   }).catch(function(){return false});
 }
 var autoSaveT=null;
+/* With Google Drive connected, Drive holds the one copy every device mirrors,
+   so the connected folder steps aside rather than keep a second copy. */
 function folderAutoSave(){
   if(!folderHandle) return;
+  if(typeof driveOn==="function"&&driveOn()) return;
   clearTimeout(autoSaveT);
   autoSaveT=setTimeout(writeStore,1500);
 }
@@ -102,7 +105,7 @@ function deliver(parts,text,mime,driveParts){
     });
     return;
   }
-  if(folderHandle){
+  if(folderHandle&&!(typeof driveOn==="function"&&driveOn())){
     writeIntoFolder(parts,text).then(function(ok){
       if(ok) toast("saved to "+parts.join("/"));
       else share();

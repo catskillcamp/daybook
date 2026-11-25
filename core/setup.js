@@ -23,7 +23,9 @@ function renderSetup(){
     cl.appendChild(log);
   }
   var fr=$("#folderRow");fr.innerHTML="";
-  if(!folderSupported()){
+  if(typeof driveOn==="function"&&driveOn()){
+    fr.appendChild(el("div","note","Google Drive is connected, so it holds the one copy every device mirrors: data, invoices and quotes all go to "+DRIVE_ROOT+"/ in Drive. On a computer with Google Drive for Desktop, that folder appears under My Drive."));
+  }else if(!folderSupported()){
     fr.appendChild(el("div","empty","this browser can't connect a folder — invoices go to the share sheet"));
   }else if(folderHandle){
     var d=el("div");d.style.display="flex";d.style.justifyContent="space-between";d.style.gap="10px";d.style.alignItems="center";
