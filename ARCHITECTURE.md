@@ -173,6 +173,31 @@ On a synced device, a replace propagates like any other edit, so deletions inclu
 2. Bump `VERSION` in `core/store.js` with each change. The service worker is network-first, and phones pick up a new version after opening the app once with signal and then reopening it.
 3. Any change to what people can do or set up also updates `FORK-GUIDE.md` in the same pull request.
 
+## Operating the live app (Eamon's setup)
+
+**The Drive folder holds only data and documents:** `radicchio-data.json`, `Invoices/` and `Quotes/`. Everything about the app (code, docs, notes) lives in this repo. Personal planning lives outside both: `My Drive/Time Tracker/Radicchio Plan.md` (plan, decisions, status) and `Hannah - start here.md` beside it.
+
+**Rules for the live data:**
+
+1. **Don't hand-edit `radicchio-data.json`.** Devices merge it against the copy each one saw last. To change data, use the app. For a scripted fix, run code in the app on a connected device and call `save()`, so it syncs like any edit. The November 2026 clean-up (Kolb Machine Inc., SK001–006, MP/MPQ) was done this way.
+2. **Back up before any bulk change:** copy `radicchio-data.json` to `My Drive/Time Tracker/Daybook Data/` with a dated name.
+3. **Never test in the live folder.** Use `driveFolder: "Radicchio TEST"` and a copy of a backup (see Testing).
+4. **Backups and data never go into this repo.** It's public, and `.gitignore` excludes the usual filenames.
+
+**Working on the code:**
+
+- Use a local Claude Code session in `C:\Users\Kiki\code\radicchio` on Eamon's PC. The working copy is kept outside Google Drive on purpose.
+- The GitHub CLI (`gh`) is installed and signed in as `sawn-red-oak`. Commits are authored as `Eamon <hello@eamon.llc>`.
+- Branch, then pull request. Merge only when Eamon says so.
+- Eamon prefers to be asked choices interactively, one decision at a time, and to see results (screenshots, the live app).
+
+**Google Cloud** (`radicchio-515819`, Google Auth Platform):
+
+- Testing mode, audience External, `drive.file` scope only.
+- Test users: hello@eamon.llc, plus anyone sharing the client.
+- Allowed origins: `https://sawn-red-oak.github.io`, `http://localhost:8765`.
+- A fork that shares the client needs its own GitHub Pages origin added, and its owner added as a test user.
+
 ## Testing (how it has been done)
 
 - **Behaviour-preserving changes:** load a copy of a real backup into `main` and into the branch, served from the same origin, and compare every tab, every block range and every document's HTML.
