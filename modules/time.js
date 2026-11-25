@@ -525,11 +525,22 @@ function sheetInvoice(sh,d){
   fieldOf(sh,"line items",mode); bindDraft(mode,"mode");
   var desc=fieldOf(sh,"description",inp("text","",""));bindDraft(desc,"desc");
   sh.appendChild(el("div","note","Used for the total line, and for any block with no note. Left blank, those cells print empty."));
+  /* extra line items beside the hours: materials, a flat fee, an expense */
+  var summary=el("div","note");
+  function paintSummary(){
+    var ia=report?0:itemsTotal(d.draft.items);
+    summary.textContent=client.name+" · "+list.length+" blocks · "+fmtH(h)+" h"+
+      (report?"":" · "+money(Math.round((amt+ia)*100)/100)+(ia?" incl. "+money(ia)+" items":""));
+  }
+  if(!report){
+    if(!d.draft.items) d.draft.items=[];
+    sh.appendChild(el("div","field")).appendChild(el("span",null,"extra items"));
+    itemEditor(sh,function(){return d.draft.items},function(l){d.draft.items=l},paintSummary);
+  }
   var memo=el("textarea");memo.rows=2;memo.placeholder="optional note to the client";
   fieldOf(sh,"memo",memo);bindDraft(memo,"memo");
 
-  sh.appendChild(el("div","note",client.name+" · "+list.length+" blocks · "+fmtH(h)+" h"+
-    (report?"":" · "+money(Math.round(amt*100)/100))));
+  sh.appendChild(summary); paintSummary();
 
   var btns=el("div","btns");
   function paintButtons(){
@@ -559,30 +570,18 @@ function sheetInvoice(sh,d){
   paintButtons();
 
   function compose(){
+    var items=report?[]:cleanItems(d.draft.items);
     return {number:report?"":(numIn?numIn.value.trim():""),clientId:client.id,
       issued:dateIn.value,due:dueIn?dueIn.value:"",memo:memo.value.trim(),
       mode:mode.value,desc:desc.value.trim(),report:report,
-      blockIds:list.map(function(b){return b.id}),
-      total:Math.round(amt*100)/100,hours:Math.round(h*100)/100};
+      blockIds:list.map(function(b){return b.id}),items:items,
+      total:Math.round((amt+itemsTotal(items))*100)/100,hours:Math.round(h*100)/100,
+      snap:snapFor(client)};
   }
   function finish(asHtml){
     var doc=compose();
-    var base=report
-      ? "report "+ymd(now())+" "+safeName(client.name)
-      : safeName(doc.number||"invoice")+" "+safeName(client.name);
-    var parts=[safeName(S.settings.invoiceDir||"Radicchio Invoices"),
-               safeName(client.name),base+(asHtml?".html":".csv")];
-    var dparts=["Invoices",safeName(client.name),parts[2]];
-    if(asHtml) deliver(parts,docFile(doc,client,list),"text/html;charset=utf-8",dparts);
-    else deliver(parts,toCsv(list),"text/csv;charset=utf-8",dparts);
-    if(!report){
-      var id=uid();
-      doc.id=id; doc.createdAt=now();
-      S.invoices[id]=doc;
-      advanceNumber(client,doc.number);
-      list.forEach(function(b){b.invoiceId=id;putEntry(b)});
-      selected={};
-    }
+    if(!report){ recordInvoice(doc,client,list); selected={}; }
+    saveDocFile(doc,client,list,!asHtml);
     save();UI.sheet=null;saveUI();closeSheet();renderAll();
     showViewer(doc,client,list,false);
   }

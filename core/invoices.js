@@ -7,7 +7,7 @@ function renderInvoices(){
   var list=Object.keys(S.invoices).map(function(k){return S.invoices[k]})
     .sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
   if(!list.length){
-    host.appendChild(el("div","empty","No invoices yet. Select blocks on the blocks tab, then Invoice."));
+    host.appendChild(el("div","empty","No invoices yet. Tap + new invoice, or select blocks on the blocks tab and generate one."));
     return;
   }
   var log=el("div","log");
@@ -16,9 +16,12 @@ function renderInvoices(){
     l1.appendChild(el("span",null,iv.number||"(no number)"));
     l1.appendChild(el("span","hrs",money(iv.total||0)));
     body.appendChild(l1);
+    var what=[];
+    if((iv.blockIds||[]).length) what.push((iv.hours||0).toFixed(2)+" h");
+    var ni=(iv.items||[]).length; if(ni) what.push(ni+(ni===1?" item":" items"));
     body.appendChild(el("div","place",
-      (S.clients[iv.clientId]?S.clients[iv.clientId].name:"—")+" \u00b7 "+
-      (iv.hours||0).toFixed(2)+" h \u00b7 issued "+dateWords(iv.issued)));
+      (S.clients[iv.clientId]?S.clients[iv.clientId].name:"—")+" · "+
+      (what.length?what.join(" + ")+" · ":"")+"issued "+dateWords(iv.issued)));
     row.appendChild(body);
     row.onclick=function(){ openInvoice(iv) };
     row.tabIndex=0;
@@ -31,8 +34,63 @@ function openInvoice(iv){
   var blocks=(iv.blockIds||[]).map(function(id){
     for(var k in S.months) if(S.months[k][id]) return S.months[k][id];
     return null}).filter(Boolean);
-  if(!blocks.length){toast("the blocks for this invoice are gone");return}
-  showViewer(iv,S.clients[iv.clientId]||{name:"client"},blocks,false);
+  if(!blocks.length&&(iv.blockIds||[]).length&&!(iv.items||[]).length){toast("the blocks for this invoice are gone");return}
+  showViewer(iv,invoiceClient(iv),blocks,false);
+}
+
+/* ---------- invoice records ----------
+   An invoice is time blocks (blockIds) and/or line items (items), each item
+   {desc, qty, unit, rate, source:"manual"|"print"|"receipt", date?, category?,
+   file?}. The client's rate, name and address are frozen on the invoice when
+   it's recorded (snap), so a later change to the client doesn't rewrite
+   invoices already sent. */
+function itemsTotal(items){
+  return Math.round((items||[]).reduce(function(a,it){return a+itemAmount(it)},0)*100)/100;
+}
+function cleanItems(items){
+  return (items||[]).filter(function(it){return (it.desc||"").trim()||itemAmount(it)})
+    .map(function(it){return Object.assign({source:"manual"},it,{desc:(it.desc||"").trim()})});
+}
+function snapFor(c){
+  c=c||{};
+  return {rate:+c.rate||0, name:c.name||"", address:c.address||"", email:c.email||""};
+}
+/* The client as the invoice shows it: frozen details over the current record. */
+function invoiceClient(iv){
+  var c=S.clients[iv.clientId]||{name:"client"};
+  return iv.snap?Object.assign({},c,{name:iv.snap.name||c.name,address:iv.snap.address,email:iv.snap.email}):c;
+}
+/* Store a composed invoice: id, frozen client details, number advanced,
+   blocks linked. Returns the stored record. */
+function recordInvoice(doc,client,blocks){
+  var id=uid(), t=now();
+  doc.id=id; doc.createdAt=t; doc.updatedAt=t;
+  doc.snap=snapFor(client);
+  doc.items=cleanItems(doc.items);
+  S.invoices[id]=doc;
+  advanceNumber(client,doc.number);
+  (blocks||[]).forEach(function(b){b.invoiceId=id;putEntry(b)});
+  save();
+  return doc;
+}
+/* File names: "<prefix> Invoice SK007", "<prefix> Quote MPQ003",
+   "<prefix> Report 2026-11-25 Sawkille Furniture". The prefix is a setting
+   (e.g. your initials); without one the name starts at "Invoice". */
+function docName(doc,client){
+  var p=(S.settings.filePrefix||"").trim(), core;
+  if(doc.quote) core="Quote "+(doc.number||"");
+  else if(doc.report) core="Report "+ymd(now())+" "+(client.name||"");
+  else core="Invoice "+(doc.number||"");
+  return safeName((p?p+" ":"")+core);
+}
+function saveDocFile(doc,client,list,asCsv){
+  var dir=doc.quote?(S.settings.quoteDir||"Radicchio Quotes"):(S.settings.invoiceDir||"Radicchio Invoices");
+  var name=docName(doc,client)+(asCsv?".csv":".html");
+  var cdir=safeName(client.name);
+  deliver([safeName(dir),cdir,name],
+    asCsv?toCsv(list):docFile(doc,client,list),
+    asCsv?"text/csv;charset=utf-8":"text/html;charset=utf-8",
+    [doc.quote?"Quotes":"Invoices",cdir,name]);
 }
 
 /* ---------------------------------------------------------
@@ -103,12 +161,13 @@ function docCss(){return [
 ".invsheet .qsec li:before{content:'\\00b7';position:absolute;left:0;color:#bbb}"
 ].join("\n")}
 
-function rateGroups(list){
+function rateGroups(list,rateOf){
   var g={};
+  rateOf=rateOf||rateFor;
   list.forEach(function(b){
-    var r=rateFor(b),k=String(r);
+    var r=rateOf(b),k=String(r),h=roundHours(rawHours(b));
     if(!g[k])g[k]={rate:r,h:0,a:0};
-    g[k].h+=roundHours(rawHours(b)); g[k].a+=amountFor(b);
+    g[k].h+=h; g[k].a+=Math.round(h*r*100)/100;
   });
   return Object.keys(g).map(function(k){return g[k]}).sort(function(x,y){return y.rate-x.rate});
 }
@@ -134,7 +193,9 @@ function docBody(doc,client,list,preview){
     byDay[k].blocks.push(b); byDay[k].h+=roundHours(rawHours(b))});
 
   var logHtml="";
-  if(doc.mode==="total"){
+  if(!sorted.length){
+    logHtml="";
+  }else if(doc.mode==="total"){
     var th=sorted.reduce(function(s2,b){return s2+roundHours(rawHours(b))},0);
     logHtml='<div class="day"><span>'+esc(dlong(sorted[0].start))+' &ndash; '+
       esc(dlong(sorted[sorted.length-1].start))+'</span><span>'+th.toFixed(2)+'</span></div>'+
@@ -160,20 +221,47 @@ function docBody(doc,client,list,preview){
 
   var onsite=sorted.filter(function(b){return b.place!=="remote"}).length;
   var remote=sorted.length-onsite;
-  var groups=rateGroups(sorted);
-  var totals="";
+  /* the rate frozen on the invoice when it was recorded, if any */
+  var rateOf=doc.snap&&doc.snap.rate!=null?function(){return +doc.snap.rate||0}:rateFor;
+  var groups=rateGroups(sorted,rateOf);
+  var items=rep?[]:(doc.items||[]).filter(function(it){return (it.desc||"").trim()||itemAmount(it)});
+  var itemsAmt=itemsTotal(items);
+  var timeAmt=Math.round(groups.reduce(function(a,g){return a+g.a},0)*100)/100;
+  var totals="", grand='<tr class="grand"><td>Total due</td><td>'+m(doc.total)+'</td></tr>';
   if(rep){
     totals='<tr class="grand"><td>Hours</td><td>'+doc.hours.toFixed(2)+'</td></tr>';
+  }else if(!sorted.length){
+    totals=grand;                                   /* items only: the table says it all */
   }else if(groups.length===1&&groups[0].rate){
     totals='<tr><td>Hours</td><td>'+doc.hours.toFixed(2)+'</td></tr>'+
            '<tr><td>Rate</td><td>'+m(groups[0].rate)+' / h</td></tr>'+
-           '<tr class="grand"><td>Total due</td><td>'+m(doc.total)+'</td></tr>';
+           (items.length?'<tr><td>Time</td><td>'+m(timeAmt)+'</td></tr><tr><td>Items</td><td>'+m(itemsAmt)+'</td></tr>':"")+
+           grand;
   }else{
     totals=groups.map(function(g){
       return '<tr><td>'+g.h.toFixed(2)+' h at '+(g.rate?m(g.rate):"no rate")+'</td><td>'+
         m(Math.round(g.a*100)/100)+'</td></tr>'}).join("")+
-      '<tr class="grand"><td>Total due</td><td>'+m(doc.total)+'</td></tr>';
+      (items.length?'<tr><td>Items</td><td>'+m(itemsAmt)+'</td></tr>':"")+
+      grand;
   }
+  var itemsHtml="";
+  if(items.length){
+    itemsHtml='<table class="qtab"><thead><tr><th>Description</th><th class="n">Qty</th>'+
+      '<th class="n">Rate</th><th class="n">Amount</th></tr></thead><tbody>'+
+      items.map(function(it){
+        var q=parseFloat(it.qty);
+        return '<tr><td>'+esc(it.desc||"")+(it.date?' <span class="u">'+esc(dateWords(it.date))+'</span>':"")+'</td>'+
+          '<td class="n">'+(isFinite(q)?q:"")+(it.unit?' <span class="u">'+esc(it.unit)+'</span>':"")+'</td>'+
+          '<td class="n">'+(parseFloat(it.rate)?m(parseFloat(it.rate)):"")+'</td>'+
+          '<td class="n">'+m(itemAmount(it))+'</td></tr>';
+      }).join("")+'</tbody></table>';
+  }
+  var period=sorted.length
+    ? '<div class="period">'+esc(dlong(sorted[0].start))+' &ndash; '+esc(dlong(sorted[sorted.length-1].start))+
+      '  ·  '+sorted.length+' blocks  ·  '+doc.hours.toFixed(2)+' h  ·  '+
+      (onsite&&remote?onsite+' on-site, '+remote+' remote':(remote?'all remote':'all on-site'))+'</div>'+
+      '<div class="ilog">'+logHtml+'</div>'
+    : "";
 
   return (preview?'<div class="pv">Preview &mdash; nothing saved</div>':"")+
   '<header><div><p class="biz">'+esc(biz.name||"")+'</p><div class="small">'+
@@ -185,10 +273,7 @@ function docBody(doc,client,list,preview){
   '<div class="parties"><h2>'+(rep?"Prepared for":"Bill to")+'</h2>'+
   '<div style="font-size:13px">'+esc(client.name||"")+'</div><div class="small">'+
   esc(client.address||"")+(client.email?"\n"+esc(client.email):"")+'</div></div>'+
-  '<div class="period">'+esc(dlong(sorted[0].start))+' &ndash; '+esc(dlong(sorted[sorted.length-1].start))+
-  '  ·  '+sorted.length+' blocks  ·  '+doc.hours.toFixed(2)+' h  ·  '+
-  (onsite&&remote?onsite+' on-site, '+remote+' remote':(remote?'all remote':'all on-site'))+'</div>'+
-  '<div class="ilog">'+logHtml+'</div>'+
+  period+itemsHtml+
   '<div class="totals"><table>'+totals+'</table></div>'+
   ((doc.memo||(biz.terms&&!rep))?'<div class="memo">'+esc(doc.memo||"")+
     (doc.memo&&biz.terms&&!rep?"\n\n":"")+esc(rep?"":(biz.terms||""))+'</div>':"");
@@ -245,12 +330,7 @@ function showViewer(doc,client,list,preview){
   if(vb) lastBtn=vb(doc,bar,preview)||null;
   if(!preview){
     var sv=el("button","btn","save file");sv.type="button";
-    sv.onclick=function(){
-      var dir=doc.quote?(S.settings.quoteDir||"Radicchio Quotes"):(S.settings.invoiceDir||"Radicchio Invoices");
-      var name=safeName((doc.number||(doc.quote?"quote":"invoice"))+" "+client.name);
-      deliver([safeName(dir),safeName(client.name),name+".html"],
-        docFile(doc,client,list),"text/html;charset=utf-8",
-        [doc.quote?"Quotes":"Invoices",safeName(client.name),name+".html"])};
+    sv.onclick=function(){ saveDocFile(doc,client,list,false) };
     bar.appendChild(sv);
   }
   if(lastBtn) bar.appendChild(lastBtn);
@@ -268,3 +348,65 @@ function hideViewer(){
   document.body.style.overflow="";
   viewerState=null;
 }
+
+/* ---------- + new invoice: line items, no hours needed ----------
+   For flat fees, expenses and anything that isn't time. Invoices built from
+   time blocks start on the blocks tab instead, and can carry items too. */
+function sheetNewInvoice(sh,d){
+  var cs=liveClients();
+  if(!cs.length){ closeSheet(); toast("add a client in setup first"); return }
+  var dr=d.draft;
+  if(!dr.items) dr.items=[{desc:"",qty:"1",unit:"",rate:""}];
+  if(!dr.cid||!S.clients[dr.cid]) dr.cid=cs[0].id;
+  head(sh,"new invoice");
+  var sc=el("select");
+  cs.forEach(function(c){var o=el("option",null,c.name);o.value=c.id;sc.appendChild(o)});
+  sc.value=dr.cid;
+  if(cs.length>1) fieldOf(sh,"client",sc);
+  var numIn=fieldOf(sh,"invoice number",inp("text",dr.num!=null?dr.num:nextNumber(S.clients[dr.cid]),""));
+  numIn.addEventListener("input",function(){dr.num=numIn.value;dr.numTouched=true;touch()});
+  sc.addEventListener("change",function(){
+    dr.cid=sc.value;
+    if(!dr.numTouched){ dr.num=nextNumber(S.clients[dr.cid]); numIn.value=dr.num }
+    touch();
+  });
+  var two=el("div","two");
+  var iss=inp("date",dr.issued||ymd(now())), due=inp("date",dr.due||ymd(addDays(now(),+S.settings.net||0)));
+  var l1=el("label","field");l1.appendChild(el("span",null,"issued"));l1.appendChild(iss);
+  var l2=el("label","field");l2.appendChild(el("span",null,"due"));l2.appendChild(due);
+  two.appendChild(l1);two.appendChild(l2);sh.appendChild(two);
+  iss.addEventListener("input",function(){dr.issued=iss.value;touch()});
+  due.addEventListener("input",function(){dr.due=due.value;touch()});
+  sh.appendChild(el("div","field")).appendChild(el("span",null,"line items"));
+  var tot=el("div","subtot");
+  function paintTot(){ tot.innerHTML=""; tot.appendChild(el("span","sc","total")); tot.appendChild(el("b",null,money(itemsTotal(dr.items)))) }
+  itemEditor(sh,function(){return dr.items},function(l){dr.items=l},paintTot);
+  sh.appendChild(tot); paintTot();
+  var memo=el("textarea");memo.rows=2;memo.placeholder="optional note to the client";memo.value=dr.memo||"";
+  fieldOf(sh,"memo",memo);
+  memo.addEventListener("input",function(){dr.memo=memo.value;touch()});
+  function compose(){
+    var c=S.clients[dr.cid]||{};
+    var items=cleanItems(dr.items);
+    return {number:(numIn.value||"").trim(),clientId:c.id,issued:iss.value,due:due.value,
+      memo:(memo.value||"").trim(),mode:"block",desc:"",blockIds:[],items:items,
+      total:itemsTotal(items),hours:0,snap:snapFor(c)};
+  }
+  var btns=el("div","btns");
+  var pv=el("button","btn grow","preview");pv.type="button";
+  pv.onclick=function(){ var doc=compose(); showViewer(doc,invoiceClient(doc),[],true) };
+  var sv=el("button","btn solid grow","save invoice");sv.type="button";
+  sv.onclick=function(){
+    var doc=compose(), c=S.clients[dr.cid];
+    if(!doc.items.length){ toast("add at least one line item"); return }
+    if(!doc.number){ toast("give it an invoice number"); return }
+    recordInvoice(doc,c,[]);
+    saveDocFile(doc,invoiceClient(doc),[],false);
+    UI.sheet=null;saveUI();closeSheet();renderAll();
+    showViewer(doc,invoiceClient(doc),[],false);
+  };
+  btns.appendChild(pv);btns.appendChild(sv);sh.appendChild(btns);
+  sh.appendChild(el("div","note","Saving records the invoice, advances the client's number and files it. It can be voided from the invoices tab."));
+}
+CORE_SHEETS.newinvoice=sheetNewInvoice;
+$("#addInvoice").addEventListener("click",function(){openSheet({kind:"newinvoice"})});

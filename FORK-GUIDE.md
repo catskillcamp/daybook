@@ -45,7 +45,7 @@ The code has two layers:
 
 - **`core/`** is shared by every version, and Eamon maintains it: storage, clients, invoices, settings, backups, and soon Google Drive sync.
 - **`modules/`** holds the features, each in one file that can be switched on or off in `config.js`. Two come with it:
-  - **time:** clock in and out, log time blocks with notes, and turn selected blocks into an invoice or a work report.
+  - **time:** clock in and out, log time blocks with notes, and turn selected blocks into an invoice (with extra line items if needed) or a work report.
   - **quotes:** quotes with line items or a lump sum, deposits, and reusable templates.
 
 A personal version is a **fork**: your own copy of the project on GitHub. You change it freely in `config.js` and `modules/`, and pull in Eamon's core improvements with one button, **Sync fork**. As long as you don't edit `core/`, those updates arrive without clashing with your changes.
@@ -54,8 +54,9 @@ A personal version is a **fork**: your own copy of the project on GitHub. You ch
 
 | Ready now | Coming later |
 |---|---|
-| Time tracking, invoices, work reports, quotes | Line items on invoices (expenses, not just hours) |
-| Google Drive sync between devices; invoices and quotes saved to Drive | Receipt and PDF scanning |
+| Time tracking, invoices, work reports, quotes | Receipt and PDF scanning |
+| Line items on invoices: flat fees and expenses, with or without hours | |
+| Google Drive sync between devices; invoices and quotes saved to Drive | |
 | Your own modules, with their own tab, saved data and colours | |
 | Backups, and import with a safe merge | |
 | Hosting your version free on GitHub Pages | |
@@ -154,7 +155,8 @@ In the app itself, on the **setup** tab, set:
 
 - their business details, which print on invoices;
 - clients, with rates and invoice number prefixes;
-- rounding and payment terms.
+- rounding and payment terms;
+- the **file name prefix**, e.g. their initials, so saved files are named like "EM Invoice SK007".
 
 These settings live on the device, not in the code.
 
@@ -200,6 +202,7 @@ Each new feature is a module. Interview first: what should it do, what does it r
 - Give it its own tab with `tab: {key: "<id>", label: "…"}`, or add sheets to existing flows.
 - Keep its data in `modData("<id>")`: an object keyed by `uid()`, with an `updatedAt: now()` on every record. That's what lets Drive sync merge it correctly between devices.
 - Reuse core pieces: `openSheet` with a sheet builder, `fieldOf`, `inp`, `calendar`, `keepList`, `itemEditor`, `money()`, `toast()`. `modules/quotes.js` shows them in use.
+- To bill something, record an invoice whose `items` are line items `{desc, qty, unit, rate, source, date?, category?, file?}`, using `recordInvoice(doc, client, [])` and `saveDocFile(...)` from `core/invoices.js`. The invoices tab's **+ new invoice** sheet (`sheetNewInvoice`) shows how.
 - Add the id to `modules` in `config.js`. Nothing else needs wiring.
 
 Try it on the computer, adjust it together, then push it and try it on the phone. Expect a few rounds.

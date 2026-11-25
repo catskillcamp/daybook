@@ -51,6 +51,8 @@ function renderSetup(){
   $("#setDataDir").value=S.settings.dataDir||"Radicchio Data";
   $("#setQuoteDir").value=S.settings.quoteDir||"Radicchio Quotes";
   $("#setQuoteValid").value=S.settings.quoteValid==null?30:S.settings.quoteValid;
+  $("#setFilePrefix").value=S.settings.filePrefix||"";
+  $("#filePrefixEg").textContent=((S.settings.filePrefix||"").trim()?(S.settings.filePrefix||"").trim()+" ":"")+"Invoice SK007";
   $("#ver").textContent=VERSION;
 }
 
@@ -121,7 +123,7 @@ $("#importBackup").addEventListener("click",function(){$("#importFile").click()}
 [["#setRound","round",1],["#setRoundMode","roundMode",0],
  ["#setNet","net",1],["#setCur","currency",0],["#setPlace","place",0],
  ["#setInvDir","invoiceDir",0],["#setDataDir","dataDir",0],
- ["#setQuoteDir","quoteDir",0],["#setQuoteValid","quoteValid",1]]
+ ["#setQuoteDir","quoteDir",0],["#setQuoteValid","quoteValid",1],["#setFilePrefix","filePrefix",0]]
 .forEach(function(p){$(p[0]).addEventListener("change",function(){
   S.settings[p[1]]=p[2]?(+this.value||0):this.value;save();renderAll()})});
 

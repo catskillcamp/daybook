@@ -64,12 +64,15 @@ S = {
                        qprefix, qnext, qpad, updatedAt, deleted?} },
   business:   {name, email, phone, address, terms},                 // printed on documents
   settings:   {round (minutes per rounding step: 0, 0.6, 6, 15, 30), roundMode:"nearest"|"up",
-               net (days), currency, place:"onsite"|"remote", invoiceDir, dataDir, quoteDir, quoteValid},
+               net (days), currency, place:"onsite"|"remote", invoiceDir, dataDir, quoteDir, quoteValid,
+               filePrefix:"EM"},                                      // saved files: "EM Invoice SK007"
   active:     null | {clientId, start, place, tasks:[{t, at}]},     // the running clock
   months:     { "YYYY-MM": { <blockId>: {id, clientId, start, end (ms), place, tasks:[{t, at}],
                                          updatedAt, invoiceId?, invoiced?} } },
   invoices:   { <id>: {id, number, clientId, issued, due ("YYYY-MM-DD"), memo, mode:"block"|"day"|"total",
-                       desc, blockIds:[…], total, hours, createdAt, updatedAt?} },
+                       desc, blockIds:[…], items:[{desc, qty, unit, rate, source:"manual"|"print"|"receipt",
+                       date?, category?, file?}], total (hours + items), hours,
+                       snap:{rate, name, address, email}, createdAt, updatedAt} },
   quotes:     { <id>: {id, quote:true, clientId, number, title, mode:"items"|"lump", items:[{desc, qty, unit, rate}],
                        scope:[{t}], lump, issued, valid, depType:"pct"|"fixed", depValue, lead,
                        exclusions:[{t}], notes, status:"draft"|"sent"|"accepted"|"declined",
@@ -85,6 +88,9 @@ S = {
 - A block is billed if it has `invoiceId`, or has `invoiced:true` (marked by hand, or billed outside the app).
 - Invoice numbering is per client: `prefix + zero-padded next`. `advanceNumber()` learns the prefix and padding from whatever number was actually used.
 - Clients are never deleted, only marked `deleted:true`, so past entries keep their names.
+- An invoice freezes the client's rate, name, address and email in `snap` when it is recorded (`recordInvoice`). Documents use `snap`, so a later change to the client doesn't rewrite invoices already sent. `migrate()` backfilled `snap` on invoices from before line items.
+- An invoice can be hours only (from the blocks tab), items only (**+ new invoice**), or both. `itemsTotal`, `cleanItems`, `recordInvoice`, `docName` and `saveDocFile` live in `core/invoices.js`.
+- File and folder names pass through `safeName`, which also drops trailing dots and spaces, as Windows and Drive for Desktop do.
 - **Never remove or rename a key.** Other devices and old backups still carry it. Add new keys to `defaults()`; `load()` fills in missing ones.
 
 ### Browser storage keys
