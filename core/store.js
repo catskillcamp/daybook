@@ -2,7 +2,7 @@
 /* The data: one object S, kept in localStorage. Clients, time blocks by month,
    invoices, quotes. Also invoice numbering and hour rounding. */
 
-var VERSION="1.17.0";
+var VERSION="1.18.0";
 var LS="radicchio.v1", LSUI="radicchio.ui";
 /* Until v1.16 the app was called Daybook and kept its data under these keys.
    They are copied across once and then left alone, as a safety net. */
@@ -14,7 +14,7 @@ function defaults(){return{
   business:{name:"",email:"",phone:"",address:"",terms:""},
   settings:{round:6,roundMode:"nearest",prefix:"",next:1,net:14,currency:"$",place:"onsite",
     invoiceDir:"Radicchio Invoices",dataDir:"Radicchio Data",quoteDir:"Radicchio Quotes",
-    quoteValid:30},
+    quoteValid:30, filePrefix:""},
   active:null, months:{}, invoices:{}, quotes:{}, qtemplates:{},
   mods:{}   /* each module's own data, by module id: see modData() */
 }}
@@ -87,6 +87,11 @@ function migrate(){
     if(c && c.qprefix===undefined){
       c.qprefix=(c.prefix||"")+"Q"; c.qnext=1; c.qpad=3;
     }}
+  /* invoices from before line items: freeze the client's rate and details on
+     them, so changing a client later doesn't rewrite invoices already sent */
+  for(var iid in S.invoices){ var iv=S.invoices[iid];
+    if(iv&&!iv.snap&&!iv.report&&S.clients[iv.clientId]) iv.snap=snapFor(S.clients[iv.clientId]);
+  }
 }
 
 /* ---------- records ---------- */

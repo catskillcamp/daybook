@@ -63,5 +63,7 @@ function tuneInputs(root){
 }
 function toast(m){var t=$("#toast");t.textContent=m;t.hidden=false;
   clearTimeout(toast._t);toast._t=setTimeout(function(){t.hidden=true},2600)}
-function safeName(s){return String(s||"").replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").trim()||"unnamed"}
+/* Safe as a file or folder name everywhere, including Windows, which drops a
+   trailing dot or space (so "Kolb Machine Inc." becomes "Kolb Machine Inc"). */
+function safeName(s){return String(s||"").replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").trim().replace(/[. ]+$/,"")||"unnamed"}
 function placeLabel(p){return p==="remote"?"Remote":"On-site"}
