@@ -29,7 +29,7 @@ function renderSetup(){
     d.appendChild(el("span",null,folderHandle.name+"/Invoices/"));
     var ch=el("button","btn bare","change");ch.onclick=connectFolder;d.appendChild(ch);
     fr.appendChild(d);
-    fr.appendChild(el("div","note","Invoices write to "+folderHandle.name+"/Invoices/<client>/. A copy of all your data is kept at "+folderHandle.name+"/daybook-data.json."));
+    fr.appendChild(el("div","note","Invoices write to "+folderHandle.name+"/Invoices/<client>/. A copy of all your data is kept at "+folderHandle.name+"/radicchio-data.json."));
   }else{
     var b=el("button","btn","connect folder");b.onclick=connectFolder;fr.appendChild(b);
     fr.appendChild(el("div","note","Pick your Time Tracker folder once. Invoices then write straight into it — no share sheet, no download."));
@@ -44,9 +44,9 @@ function renderSetup(){
   $("#setNet").value=S.settings.net||0;
   $("#setCur").value=S.settings.currency||"$";
   $("#setPlace").value=S.settings.place||"onsite";
-  $("#setInvDir").value=S.settings.invoiceDir||"Daybook Invoices";
-  $("#setDataDir").value=S.settings.dataDir||"Daybook Data";
-  $("#setQuoteDir").value=S.settings.quoteDir||"Daybook Quotes";
+  $("#setInvDir").value=S.settings.invoiceDir||"Radicchio Invoices";
+  $("#setDataDir").value=S.settings.dataDir||"Radicchio Data";
+  $("#setQuoteDir").value=S.settings.quoteDir||"Radicchio Quotes";
   $("#setQuoteValid").value=S.settings.quoteValid==null?30:S.settings.quoteValid;
   $("#ver").textContent=VERSION;
 }
@@ -105,11 +105,11 @@ $("#exportAll").addEventListener("click",function(){
   var l=allEntries();if(!l.length){toast("no entries yet");return}
   deliver(["all_hours_"+stamp()+".csv"],toCsv(l),"text/csv;charset=utf-8")});
 $("#exportBackup").addEventListener("click",function(){
-  deliver(["daybook_backup_"+stamp()+".json"],JSON.stringify(S,null,1),"application/json")});
+  deliver(["radicchio_backup_"+stamp()+".json"],JSON.stringify(S,null,1),"application/json")});
 $("#writeMasters").addEventListener("click",function(){
   if(!folderHandle){toast("connect a folder first — on a phone use export all blocks");return}
   writeAllDerived().then(function(){
-      toast("master sheets written to "+(S.settings.dataDir||"Daybook Data")+"/")})
+      toast("master sheets written to "+(S.settings.dataDir||"Radicchio Data")+"/")})
     .catch(function(){toast("couldn't write to that folder")})});
 $("#importBackup").addEventListener("click",function(){$("#importFile").click()});
 

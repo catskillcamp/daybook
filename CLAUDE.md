@@ -1,16 +1,18 @@
-# Radicchio (currently still named Daybook)
+# Radicchio
 
-A time-tracking and invoicing app for phone and desktop. Plain HTML, CSS and JavaScript: no build step, no npm. Open `index.html` through any static web server to run it.
+A time-tracking and invoicing app for phone and desktop. Plain HTML, CSS and JavaScript: no build step, no npm. Open `index.html` through any static web server to run it, for example `python3 -m http.server 8000`, then go to http://localhost:8000.
+
+If you are helping someone set up their own fork, read `FORK-GUIDE.md` first.
 
 ## Layout
 
 ```
-index.html     the page: markup only, then loads the scripts below in order
+index.html     the page markup; loads config.js and core/
 config.js      name and which modules are on            ← each version edits this
 core/          shared by every version                  ← maintained upstream
   app.css        all styles
   util.js        helpers (dates, money, toasts)
-  registry.js    how modules plug in; renderAll()
+  registry.js    how modules plug in; modData(); renderAll()
   store.js       the data object S in localStorage; numbering, rounding
   files.js       folder writes, share sheet, CSV
   lineitems.js   line items and their editor
@@ -18,18 +20,21 @@ core/          shared by every version                  ← maintained upstream
   invoices.js    invoices tab, invoice documents, document viewer
   setup.js       setup tab, clients, settings
   backup.js      backup import (merge / replace)
-  boot.js        start-up; loaded last
+  load.js        loads the modules listed in config.js, then boot.js
+  boot.js        start-up; runs last
 modules/       features that can be switched on or off  ← add your own here
   time.js        clock, time blocks, invoices from hours
   quotes.js      quotes and templates
-sw.js          offline cache; list every new file in SHELL
+sw.js          offline cache (reads the module list from config.js)
 ```
 
 ## Rules
 
-- **Customise in `config.js` and `modules/`.** Don't edit `core/` in a fork. Fixes there come from the main repo through GitHub's "Sync fork", and local edits to `core/` make those syncs conflict. If core needs a change, raise it with the main repo.
-- **A new feature is a new module.** Copy the shape of `modules/quotes.js`: wrap the file in `(function(){ ... })()`, start with `if(!moduleOn("<id>")) return;`, and end with `registerModule({...})`. The comment at the top of `core/registry.js` lists what a module can provide. Add its id to `CONFIG.modules`, add its `<script>` tag to `index.html` before `core/boot.js`, and add it to `SHELL` in `sw.js`.
-- Tabs, panels and buttons that belong to a module carry `data-module="<id>"` in `index.html`, so they hide when the module is off.
-- Scripts are classic scripts sharing one global scope, not ES modules. Core's functions and `S` are global. Inside a module, keep everything private and expose it only through `registerModule`.
-- Data lives in `S` (see `defaults()` in `core/store.js`). Never remove or rename an existing key: other devices and old backups still carry it. Add new keys with a default.
-- After a change, bump `VERSION` in `core/store.js` so the service worker picks up the new files.
+- **Customise in `config.js` and `modules/` only.** In a fork, don't edit `core/`, `index.html` or `sw.js`. Fixes to those come from the main repo (`sawn-red-oak/daybook`) through GitHub's "Sync fork", and local edits make those syncs conflict. If core needs a change, open an issue on the main repo.
+- **A new feature is a new module**, in `modules/<id>.js`, with `<id>` added to `modules` in `config.js`. That's all the wiring: `core/load.js` loads it, and the service worker caches it.
+- **The shape of a module:** see `modules/quotes.js`. Wrap the file in `(function(){ "use strict"; ... })()`, start with `if(!moduleOn("<id>")) return;`, and end with `registerModule({...})`. The comment at the top of `core/registry.js` lists everything a module can provide: `render`, `sheets`, `onShow`, `tab` (core makes the tab and an empty panel `#p-<key>`), `css` and hooks.
+- **A module's data** goes in `modData("<id>")`, never in new top-level keys of `S`. Keep each collection as an object keyed by id (use `uid()`), with an `updatedAt` (`now()`) on every record. Backups, imports and (soon) Drive sync merge record by record, and the newer `updatedAt` wins. Call `save()` after a change.
+- Scripts are classic scripts sharing one global scope, not ES modules. Core's functions (`$`, `el`, `money`, `toast`, `openSheet`, `head`, `fieldOf`, `inp`, `keepList`, `calendar`, `itemEditor` …) and `S` are global. Inside a module, keep everything private and expose it only through `registerModule`.
+- Never remove or rename an existing key in `S`: other devices and old backups still carry it.
+- In the main repo, bump `VERSION` in `core/store.js` with each change so phones pick up the new files.
+- The built-in tabs (track, blocks, quotes) are in `index.html` and carry `data-module="<id>"`, so they hide when their module is off.

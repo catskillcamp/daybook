@@ -1,6 +1,6 @@
 {
-  "name": "Daybook",
-  "short_name": "Daybook",
+  "name": "Radicchio",
+  "short_name": "Radicchio",
   "description": "Freelance hours, logged as they happen.",
   "start_url": "./index.html",
   "scope": "./",

@@ -246,7 +246,7 @@ function showViewer(doc,client,list,preview){
   if(!preview){
     var sv=el("button","btn","save file");sv.type="button";
     sv.onclick=function(){
-      var dir=doc.quote?(S.settings.quoteDir||"Daybook Quotes"):(S.settings.invoiceDir||"Daybook Invoices");
+      var dir=doc.quote?(S.settings.quoteDir||"Radicchio Quotes"):(S.settings.invoiceDir||"Radicchio Invoices");
       var name=safeName((doc.number||(doc.quote?"quote":"invoice"))+" "+client.name);
       deliver([safeName(dir),safeName(client.name),name+".html"],
         docFile(doc,client,list),"text/html;charset=utf-8")};

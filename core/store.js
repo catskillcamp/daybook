@@ -2,17 +2,21 @@
 /* The data: one object S, kept in localStorage. Clients, time blocks by month,
    invoices, quotes. Also invoice numbering and hour rounding. */
 
-var VERSION="1.15.0";
-var LS="daybook.v1", LSUI="daybook.ui";
+var VERSION="1.16.0";
+var LS="radicchio.v1", LSUI="radicchio.ui";
+/* Until v1.16 the app was called Daybook and kept its data under these keys.
+   They are copied across once and then left alone, as a safety net. */
+var OLD_LS="daybook.v1", OLD_LSUI="daybook.ui", OLD_SEEN="radicchio.daybook-seen";
 
 /* ---------- state ---------- */
 function defaults(){return{
   clients:{},
   business:{name:"",email:"",phone:"",address:"",terms:""},
   settings:{round:6,roundMode:"nearest",prefix:"",next:1,net:14,currency:"$",place:"onsite",
-    invoiceDir:"Daybook Invoices",dataDir:"Daybook Data",quoteDir:"Daybook Quotes",
+    invoiceDir:"Radicchio Invoices",dataDir:"Radicchio Data",quoteDir:"Radicchio Quotes",
     quoteValid:30},
-  active:null, months:{}, invoices:{}, quotes:{}, qtemplates:{}
+  active:null, months:{}, invoices:{}, quotes:{}, qtemplates:{},
+  mods:{}   /* each module's own data, by module id: see modData() */
 }}
 var S=defaults();
 var UI={tab:"track",sheet:null};
@@ -20,6 +24,7 @@ var UI={tab:"track",sheet:null};
 function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}; folderAutoSave()}
 function saveUI(){try{localStorage.setItem(LSUI,JSON.stringify(UI))}catch(e){}}
 function load(){
+  adoptDaybook();
   try{var r=localStorage.getItem(LS); if(r){var p=JSON.parse(r);
     if(p&&typeof p==="object"){
       S.clients=p.clients||{};
@@ -27,6 +32,7 @@ function load(){
       S.settings=Object.assign(defaults().settings,p.settings||{});
       S.active=p.active||null; S.months=p.months||{}; S.invoices=p.invoices||{};
       S.quotes=p.quotes||{}; S.qtemplates=p.qtemplates||{};
+      S.mods=p.mods||{};
     }}}catch(e){}
   try{var u=localStorage.getItem(LSUI); if(u){var q=JSON.parse(u); if(q&&typeof q==="object") UI=Object.assign(UI,q)}}catch(e){}
   /* Any store key the running build expects must exist before the first
@@ -36,6 +42,34 @@ function load(){
   var base=defaults();
   for(var k in base) if(S[k]===undefined||S[k]===null&&base[k]!==null) S[k]=base[k];
   migrate();
+  catchUpDaybook();
+}
+/* First run after the rename: take over the Daybook data and screen state. */
+function adoptDaybook(){
+  try{
+    if(localStorage.getItem(LS)==null){
+      var o=localStorage.getItem(OLD_LS);
+      if(o!=null){ localStorage.setItem(LS,o); localStorage.setItem(OLD_SEEN,o); }
+    }
+    if(localStorage.getItem(LSUI)==null){
+      var u=localStorage.getItem(OLD_LSUI);
+      if(u!=null) localStorage.setItem(LSUI,u);
+    }
+  }catch(e){}
+}
+/* An old Daybook copy of the app can still be cached on a phone, and on a slow
+   connection the service worker may open it instead of this one. Anything it
+   writes lands under the old key. When that key has changed since we last
+   looked, merge it in with the same rules as a backup import: newer records
+   win, and billed work is never un-invoiced. */
+function catchUpDaybook(){
+  try{
+    var o=localStorage.getItem(OLD_LS);
+    if(o==null||o===localStorage.getItem(OLD_SEEN)) return;
+    var p=JSON.parse(o);
+    if(p&&typeof p==="object") mergeBackup(p);
+    localStorage.setItem(OLD_SEEN,o);
+  }catch(e){}
 }
 /* old shape: a single `note` string per entry, no place, no tasks */
 function migrate(){
