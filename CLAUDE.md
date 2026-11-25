@@ -2,7 +2,7 @@
 
 A time-tracking and invoicing app for phone and desktop. Plain HTML, CSS and JavaScript: no build step, no npm. Open `index.html` through any static web server to run it, for example `python3 -m http.server 8000`, then go to http://localhost:8000.
 
-If you are helping someone set up their own fork, read `FORK-GUIDE.md` first.
+Read `ARCHITECTURE.md` before changing core, data or sync code. If you are helping someone set up their own fork, read `FORK-GUIDE.md` first.
 
 ## Layout
 
