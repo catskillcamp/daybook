@@ -11,3 +11,7 @@ Tracking hours and weekly invoices for lunch-cooking work, plus a grocery budget
 ## Planned
 - "groceries" module: manual expense entry + optional receipt photo,
   weekly budget (editable per week), running balance from start date.
+
+## Done
+- groceries module (budget, receipts, other expenses, billed weekly)
+- look module: Arial + graphite colours

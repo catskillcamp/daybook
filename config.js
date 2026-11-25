@@ -22,5 +22,5 @@ var CONFIG = {
        "time"   — clock in/out, time blocks, invoices from hours
        "quotes" — quotes with line items, templates
        "prints" — price 3D print jobs and bill them                */
-  modules: ["time"]
+  modules: ["time", "groceries", "look"]
 };
