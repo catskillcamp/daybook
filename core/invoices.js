@@ -320,6 +320,7 @@ function showViewer(doc,client,list,preview){
           var b=S.months[k][id];
           if(b.invoiceId===doc.id){delete b.invoiceId;b.invoiced=false;b.updatedAt=now()}
         }});
+      MODULES.forEach(function(m){ if(m.onVoid) m.onVoid(doc) });
       delete S.invoices[doc.id];
       save();hideViewer();renderAll();
       toast("voided — those blocks are un-invoiced again")};
@@ -349,6 +350,50 @@ function hideViewer(){
   viewerState=null;
 }
 
+/* ---------- things modules offer to bill ----------
+   A module can register billables(clientId), returning what is waiting to be
+   billed for that client:
+     [{key:"prints:<id>", label, amount, item:{desc,qty,unit,rate,source,date},
+       bill:function(invoiceId){ ...mark it billed... }}]
+   and onVoid(invoice), to release them again when an invoice is voided.
+   The invoice sheets list them with tick boxes; ticked ones become lines. */
+function billablesFor(cid){
+  var out=[];
+  MODULES.forEach(function(m){ if(m.billables) out=out.concat(m.billables(cid)||[]) });
+  return out;
+}
+function pickedBillables(cid,draft){
+  var keys=draft.bill;
+  return billablesFor(cid).filter(function(b){ return !keys||keys.indexOf(b.key)>=0 });
+}
+/* Everything waiting is ticked to start with; draft.bill holds the ticks. */
+function billablePicker(sh,getCid,draft,onChange){
+  var box=el("div"); sh.appendChild(box);
+  function paint(){
+    box.innerHTML="";
+    var list=billablesFor(getCid());
+    if(!list.length) return;
+    if(!draft.bill) draft.bill=list.map(function(b){return b.key});
+    box.appendChild(el("div","field")).appendChild(el("span",null,"waiting to be billed"));
+    var log=el("div","log");
+    list.forEach(function(b){
+      var on=draft.bill.indexOf(b.key)>=0;
+      var row=el("div","row"+(on?" on":"")), bx=el("span","box",on?"[x]":"[ ]"), body=el("div","body"), l1=el("div","l1");
+      l1.appendChild(el("span",null,b.label)); l1.appendChild(el("span","hrs",money(b.amount)));
+      body.appendChild(l1); row.appendChild(bx); row.appendChild(body);
+      row.onclick=function(){
+        var i=draft.bill.indexOf(b.key);
+        if(i>=0) draft.bill.splice(i,1); else draft.bill.push(b.key);
+        touch(); paint(); if(onChange) onChange();
+      };
+      log.appendChild(row);
+    });
+    box.appendChild(log);
+  }
+  paint();
+  return {paint:paint, reset:function(){ draft.bill=null; paint() }};
+}
+
 /* ---------- + new invoice: line items, no hours needed ----------
    For flat fees, expenses and anything that isn't time. Invoices built from
    time blocks start on the blocks tab instead, and can carry items too. */
@@ -368,6 +413,7 @@ function sheetNewInvoice(sh,d){
   sc.addEventListener("change",function(){
     dr.cid=sc.value;
     if(!dr.numTouched){ dr.num=nextNumber(S.clients[dr.cid]); numIn.value=dr.num }
+    picker.reset(); paintTot();
     touch();
   });
   var two=el("div","two");
@@ -377,9 +423,11 @@ function sheetNewInvoice(sh,d){
   two.appendChild(l1);two.appendChild(l2);sh.appendChild(two);
   iss.addEventListener("input",function(){dr.issued=iss.value;touch()});
   due.addEventListener("input",function(){dr.due=due.value;touch()});
-  sh.appendChild(el("div","field")).appendChild(el("span",null,"line items"));
   var tot=el("div","subtot");
-  function paintTot(){ tot.innerHTML=""; tot.appendChild(el("span","sc","total")); tot.appendChild(el("b",null,money(itemsTotal(dr.items)))) }
+  function pickedItems(){ return pickedBillables(dr.cid,dr).map(function(b){return b.item}) }
+  function paintTot(){ tot.innerHTML=""; tot.appendChild(el("span","sc","total")); tot.appendChild(el("b",null,money(itemsTotal(pickedItems().concat(dr.items))))) }
+  var picker=billablePicker(sh,function(){return dr.cid},dr,paintTot);
+  sh.appendChild(el("div","field")).appendChild(el("span",null,"line items"));
   itemEditor(sh,function(){return dr.items},function(l){dr.items=l},paintTot);
   sh.appendChild(tot); paintTot();
   var memo=el("textarea");memo.rows=2;memo.placeholder="optional note to the client";memo.value=dr.memo||"";
@@ -387,7 +435,7 @@ function sheetNewInvoice(sh,d){
   memo.addEventListener("input",function(){dr.memo=memo.value;touch()});
   function compose(){
     var c=S.clients[dr.cid]||{};
-    var items=cleanItems(dr.items);
+    var items=cleanItems(pickedItems().concat(dr.items));
     return {number:(numIn.value||"").trim(),clientId:c.id,issued:iss.value,due:due.value,
       memo:(memo.value||"").trim(),mode:"block",desc:"",blockIds:[],items:items,
       total:itemsTotal(items),hours:0,snap:snapFor(c)};
@@ -400,7 +448,9 @@ function sheetNewInvoice(sh,d){
     var doc=compose(), c=S.clients[dr.cid];
     if(!doc.items.length){ toast("add at least one line item"); return }
     if(!doc.number){ toast("give it an invoice number"); return }
+    var picked=pickedBillables(dr.cid,dr);
     recordInvoice(doc,c,[]);
+    picked.forEach(function(b){ b.bill(doc.id) }); save();
     saveDocFile(doc,invoiceClient(doc),[],false);
     UI.sheet=null;saveUI();closeSheet();renderAll();
     showViewer(doc,invoiceClient(doc),[],false);

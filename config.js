@@ -20,6 +20,7 @@ var CONFIG = {
 
   /* Features to switch on. Each is a file in modules/.
        "time"   — clock in/out, time blocks, invoices from hours
-       "quotes" — quotes with line items, templates                */
-  modules: ["time", "quotes"]
+       "quotes" — quotes with line items, templates
+       "prints" — price 3D print jobs and bill them                */
+  modules: ["time", "quotes", "prints"]
 };
