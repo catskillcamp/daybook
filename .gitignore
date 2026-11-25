@@ -1,0 +1,4 @@
+# Personal data never belongs in the repo: it is public, and data lives on devices.
+*backup*.json
+*backup*.txt
+*-data.json
